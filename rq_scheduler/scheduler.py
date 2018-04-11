@@ -432,13 +432,16 @@ class Scheduler(object):
 
                 start_time = time.time()
                 if self.acquire_lock():
-                    self.enqueue_jobs()
+                    try:
+                        self.enqueue_jobs()
+                    finally:
+                        self.remove_lock()
 
                     if burst:
                         self.log.info('RQ scheduler done, quitting')
                         break
                 else:
-                    self.log.warning('Lock already taken - skipping run')
+                    self.log.debug('Lock already taken - skipping run')
 
                 # Time has already elapsed while enqueuing jobs, so don't wait too long.
                 seconds_elapsed_since_start = time.time() - start_time
@@ -448,5 +451,4 @@ class Scheduler(object):
                     self.log.debug("Sleeping %.2f seconds" % seconds_until_next_scheduled_run)
                     time.sleep(seconds_until_next_scheduled_run)
         finally:
-            self.remove_lock()
             self.register_death()
